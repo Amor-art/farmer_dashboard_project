@@ -3,11 +3,45 @@ import pandas as pd
 import pydeck as pdk
 import altair as alt
 
+# County selector
+kenya_counties = [
+    "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa",
+    "Homa Bay", "Isiolo", "Kajiado", "Kakamega", "Kericho", "Kiambu", "Kilifi",
+    "Kirinyaga", "Kisii", "Kisumu", "Kitui", "Kwale", "Laikipia", "Lamu", "Machakos",
+    "Makueni", "Mandera", "Marsabit", "Meru", "Migori", "Mombasa", "Murang'a",
+    "Nairobi", "Nakuru", "Nandi", "Narok", "Nyamira", "Nyandarua", "Nyeri",
+    "Samburu", "Siaya", "Taita-Taveta", "Tana River", "Tharaka-Nithi", "Trans Nzoia",
+    "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot"
+]
+
+county = st.selectbox("Choose County", kenya_counties)
+st.title(f"{county} Farmer Dashboard")
+
+import pandas as pd
+import os
+
+# Format county name to match CSV file
+county_file = county.lower().replace(" ", "_").replace("-", "_") + "_farmers.csv"
+data_path = os.path.join("data", county_file)
+
+# Load the correct county data
+try:
+    df = pd.read_csv(data_path)
+    st.success(f"✅ Loaded data for {county}")
+except FileNotFoundError:
+    st.warning(f"⚠️ No data found for {county}. Showing empty table.")
+    df = pd.DataFrame()
+# ✅ Convert GPS Coordinates to Latitude and Longitude
+if "GPS Coordinates" in df.columns:
+    df[["Latitude", "Longitude"]] = df["GPS Coordinates"].str.split(",", expand=True).astype(float)
+
+
 # Load cleaned data
-df = pd.read_csv("data/farmer_data_cleaned.csv")
+#df = pd.read_csv("data/farmer_data_cleaned.csv")
 
 st.set_page_config(page_title="Farmer Dashboard", layout="wide")
-st.title("🌿 Makueni Farmer Dashboard")
+st.markdown(f"🌿 {county} Farmer Dashboard")
+
 import streamlit as st
 st.warning("⚠️ This dashboard uses randomly generated data, including farmer names, locations, and yields.It is a prototype for layout testing and deployment validation only. Future releases will work with real farmer data.")
 
@@ -37,19 +71,28 @@ st.write("🧾 Available Columns:", filtered_df.columns.tolist())
 
 # 🧩 Build dynamic blue borders around selected locations
 polygon_data = []
-for loc in locations:
-    loc_df = df[df["Location"] == loc]
-    if not loc_df.empty:
-        lat = loc_df["Latitude"].mean()
-        lon = loc_df["Longitude"].mean()
-        box = [
-            [lon - 0.01, lat + 0.01],
-            [lon + 0.01, lat + 0.01],
-            [lon + 0.01, lat - 0.01],
-            [lon - 0.01, lat - 0.01],
-            [lon - 0.01, lat + 0.01]
-        ]
-        polygon_data.append({"coordinates": [box]})
+
+if "Latitude" in df.columns and "Longitude" in df.columns:
+    for loc in locations:
+        loc_df = df[df["Location"] == loc]
+        if not loc_df.empty:
+            lat = loc_df["Latitude"].mean()
+            lon = loc_df["Longitude"].mean()
+
+            # Create a small square around the location
+            box = [
+                [lon - 0.01, lat + 0.01],
+                [lon + 0.01, lat + 0.01],
+                [lon + 0.01, lat - 0.01],
+                [lon - 0.01, lat - 0.01],
+                [lon - 0.01, lat + 0.01]  # close the loop
+            ]
+
+            polygon_data.append({"coordinates": [box]})
+
+else:
+    st.info("📍 Location data not available for this county.")
+
 
 # 🎨 Create polygon layer
 polygon_layer = pdk.Layer(
@@ -64,27 +107,31 @@ polygon_layer = pdk.Layer(
     filled=True,
 )
 
-# 🗺️ Map view
-st.subheader("🗺️ Farmer Locations")
-st.pydeck_chart(pdk.Deck(
-    initial_view_state=pdk.ViewState(
-        latitude=filtered_df["Latitude"].mean(),
-        longitude=filtered_df["Longitude"].mean(),
-        zoom=8,
-        pitch=0,
-    ),
-    layers=[
-        polygon_layer,
-        pdk.Layer(
-            "ScatterplotLayer",
-            data=filtered_df,
-            get_position=["Longitude", "Latitude"],
-            get_radius=100,
-            get_color=[0, 128, 0],
-            pickable=True,
-        )
-    ],
-))
+# 🗺️ Farmer Locations Map
+if "Latitude" in filtered_df.columns and "Longitude" in filtered_df.columns:
+    st.subheader("🗺️ Farmer Locations")
+    st.pydeck_chart(pdk.Deck(
+        initial_view_state=pdk.ViewState(
+            latitude=filtered_df["Latitude"].mean(),
+            longitude=filtered_df["Longitude"].mean(),
+            zoom=8,
+            pitch=0,
+        ),
+        layers=[
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=filtered_df,
+                get_position=["Longitude", "Latitude"],
+                get_radius=100,
+                get_color=[0, 128, 0],
+                pickable=True,
+            )
+        ],
+    ))
+else:
+    st.info("📍 Location data not available for this county.")
+
+
 
 # 📊 Seasonal summary
 st.subheader("📊 Seasonal Yield Summary")
