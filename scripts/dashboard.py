@@ -8,6 +8,9 @@ df = pd.read_csv("data/farmer_data_cleaned.csv")
 
 st.set_page_config(page_title="Farmer Dashboard", layout="wide")
 st.title("🌿 Makueni Farmer Dashboard")
+import streamlit as st
+st.warning("⚠️ This dashboard uses randomly generated data, including farmer names, locations, and yields.It is a prototype for layout testing and deployment validation only. Future releases will work with real farmer data.")
+
 st.markdown("""
 <div style='background-color:#e0f7fa; padding:15px; border-radius:10px'>
     <h3 style='color:#00796b'>Welcome, steward of data 🌱</h3>
