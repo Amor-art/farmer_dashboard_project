@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import pydeck as pdk
 import altair as alt
+import os
+
+
 
 # County selector
 kenya_counties = [
@@ -58,6 +61,24 @@ st.markdown("Built by Austine Otieno — stewarding data for impact.")
 # Sidebar filters
 locations = st.sidebar.multiselect("📍 Filter by Location", options=df["Location"].unique())
 methods = st.sidebar.multiselect("🌱 Filter by Farming Method", options=df["Farming Method"].unique())
+
+st.sidebar.markdown("### 🔍 Debug Panel")
+
+# List all CSV files in the data folder
+csv_files = [f for f in os.listdir("data") if f.endswith(".csv")]
+selected_debug_file = st.sidebar.selectbox("Select a CSV to inspect", csv_files)
+
+# Load and preview the selected file
+debug_df = pd.read_csv(os.path.join("data", selected_debug_file))
+st.sidebar.write("📄 Preview of selected file:")
+st.sidebar.dataframe(debug_df.head())
+
+# Check for Latitude and Longitude columns
+if "Latitude" in debug_df.columns and "Longitude" in debug_df.columns:
+    st.sidebar.success("✅ Latitude and Longitude columns found")
+else:
+    st.sidebar.warning("⚠️ Latitude and/or Longitude columns missing")
+
 
 # Apply filters
 filtered_df = df.copy()
